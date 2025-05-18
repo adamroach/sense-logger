@@ -14,7 +14,7 @@ const (
 	MainFile   = "monitor.rrd"
 	DeviceFile = "device.json"
 	SampleRate = 1
-	Heartbeat  = 2 * SampleRate
+	Heartbeat  = 15 * SampleRate
 	VMax       = 250
 	IMax       = 200 // maximum for 200-amp service
 	WMax       = VMax * IMax

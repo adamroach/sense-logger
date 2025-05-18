@@ -40,7 +40,12 @@ func main() {
 		}
 		realtimeUpdate, err := client.GetRealtimeUpdate()
 		if err != nil {
-			panic(err)
+			// Sometimes the websocket disconects -- we'll try refreshing the token
+			_, err := client.Refresh()
+			if err != nil {
+				panic(err)
+			}
+			continue
 		}
 		deviceCount := len(realtimeUpdate.Payload.Devices)
 		if deviceCount == 0 {
