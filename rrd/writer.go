@@ -13,6 +13,7 @@ import (
 const (
 	MainFile   = "monitor.rrd"
 	DeviceFile = "device.json"
+	ActiveFile = "active.json"
 	SampleRate = 1
 	Heartbeat  = 15 * SampleRate
 	VMax       = 250
@@ -129,6 +130,26 @@ func (w *Writer) Write(update *sense.RealtimeUpdate) error {
 	)
 	if err != nil {
 		return fmt.Errorf("error updating RRD file %v: %w", mainFilePath, err)
+	}
+
+	if len(update.Payload.Devices) > 0 {
+		active := make([]string, len(update.Payload.Devices))
+		for i, device := range update.Payload.Devices {
+			active[i] = device.ID
+		}
+		// Update the active devices file
+		activeFilePath := fmt.Sprintf("%s/%s", w.directory, ActiveFile)
+		file, err := os.Create(activeFilePath)
+		if err != nil {
+			return fmt.Errorf("error creating JSON file %v: %w", activeFilePath, err)
+		}
+		defer file.Close()
+
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(active); err != nil {
+			return fmt.Errorf("error encoding JSON file %v: %w", activeFilePath, err)
+		}
 	}
 
 	// Update the device RRD files
