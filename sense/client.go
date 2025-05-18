@@ -415,9 +415,20 @@ func (c *Client) startRealtimeUpdates() error {
 		defer func() {
 			c.mu.Lock()
 			close(c.updates)
-			c.conn.Close()
-			c.conn = nil
+			if c.conn != nil {
+				c.conn.Close()
+				c.conn = nil
+			}
 			c.mu.Unlock()
+		}()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("WebSocket goroutine panicked: %v\n", r)
+				c.mu.Lock()
+				c.conn = nil
+				c.mu.Unlock()
+				return
+			}
 		}()
 		for {
 			_, message, err := c.conn.ReadMessage()
