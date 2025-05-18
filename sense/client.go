@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -31,6 +32,7 @@ const (
 		"sense_client_type={{.ClientType}}&" +
 		"sense_ui_language={{.UILanguage}}"
 	defaultTokenExpiry = 24 * time.Hour
+	watchdogInterval   = 5 * time.Second
 )
 
 type WebsocketParams struct {
@@ -74,6 +76,7 @@ type Client struct {
 	authResponse *AuthResponse
 	devices      *Devices
 	updates      chan *RealtimeUpdate
+	watchdog     *time.Timer
 	conn         *websocket.Conn
 	mu           sync.Mutex
 }
@@ -155,6 +158,10 @@ func (c *Client) Close() error {
 	if c.conn != nil {
 		c.conn.Close()
 		c.conn = nil
+	}
+	if c.watchdog != nil {
+		c.watchdog.Stop()
+		c.watchdog = nil
 	}
 	c.mu.Unlock()
 	return nil
@@ -292,6 +299,7 @@ func (c *Client) GetRealtimeUpdate() (*RealtimeUpdate, error) {
 			c.mu.Unlock()
 			return nil, err
 		}
+		c.watchdog = time.AfterFunc(watchdogInterval, func() { c.Close() })
 	}
 	c.mu.Unlock()
 	update := <-c.updates
@@ -415,15 +423,24 @@ func (c *Client) startRealtimeUpdates() error {
 			_, message, err := c.conn.ReadMessage()
 			if err != nil {
 				if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-					fmt.Printf("WebSocket read error: %v\n", err)
+					log.Printf("WebSocket read error: %v\n", err)
 				}
 				return
 			}
 
 			update := &RealtimeUpdate{}
 			if err := json.Unmarshal(message, update); err != nil {
-				fmt.Printf("Failed to unmarshal WebSocket message: %v\n", err)
+				log.Printf("Failed to unmarshal WebSocket message: %v\n", err)
 				continue
+			}
+
+			if update.Type != "realtime_update" {
+				log.Printf("Unexpected WebSocket message type: %s\n", update.Type)
+				continue
+			}
+
+			if len(update.Payload.Devices) > 0 {
+				c.watchdog.Reset(watchdogInterval)
 			}
 
 			c.updates <- update

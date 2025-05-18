@@ -89,7 +89,7 @@ func (w *Writer) Write(update *sense.RealtimeUpdate) error {
 	// Ensure the main RRD file exists
 	if _, err := os.Stat(mainFilePath); os.IsNotExist(err) {
 		fmt.Printf("%s does not exist; creating\n", mainFilePath)
-		c := rrd.NewCreator(mainFilePath, time.Now(), 1)
+		c := rrd.NewCreator(mainFilePath, time.Now().Add(-1*time.Hour), 1)
 		setCreatorParameters(c)
 		/*
 			Voltage:        [122.5346309842862 122.60344311894005]
@@ -136,7 +136,7 @@ func (w *Writer) Write(update *sense.RealtimeUpdate) error {
 		deviceFilePath := fmt.Sprintf("%s/%s.rrd", w.directory, device.ID)
 		if _, err := os.Stat(deviceFilePath); os.IsNotExist(err) {
 			fmt.Printf("%s does not exist; creating\n", deviceFilePath)
-			c := rrd.NewCreator(deviceFilePath, time.Now(), 1)
+			c := rrd.NewCreator(deviceFilePath, time.Now().Add(-1*time.Hour), 1)
 			setCreatorParameters(c)
 			c.DS("w", "GAUGE", Heartbeat, -WMax, WMax)
 			c.DS("i", "GAUGE", Heartbeat, 0, IMax)
