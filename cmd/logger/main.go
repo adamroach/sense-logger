@@ -57,7 +57,6 @@ func main() {
 		err = rrdWriter.Write(realtimeUpdate)
 		if err != nil {
 			fmt.Printf("Error writing to RRD: %v\n", err)
-			panic(err)
 		}
 
 	}
