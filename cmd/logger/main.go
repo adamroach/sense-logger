@@ -54,6 +54,11 @@ func main() {
 		fmt.Print("\033[H\033[2J")
 		fmt.Printf("%v - token expires in %v\n\n", time.Now(), time.Until(client.TokenExpiry()))
 		fmt.Println(realtimeUpdate)
-		rrdWriter.Write(realtimeUpdate)
+		err = rrdWriter.Write(realtimeUpdate)
+		if err != nil {
+			fmt.Printf("Error writing to RRD: %v\n", err)
+			panic(err)
+		}
+
 	}
 }
